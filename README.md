@@ -2,6 +2,27 @@
 
 面向 Waveshare ESP32-S3-RLCD-4.2，Arduino C++ 开发。该目录可独立复制和构建，全部图形库源码及显示驱动已内置。
 
+## 安装 CLI
+
+在本项目目录运行：
+
+```sh
+uv tool install .
+rlcd config init
+rlcd config set device http://DEVICE_IP
+rlcd pet preview deepseek-whale
+rlcd pet install deepseek-whale
+rlcd pet use deepseek-whale
+```
+
+安装后可在任意目录运行 `rlcd`。配置、内置宠物、预览与编译资源保存在 `~/.config/rlcd`，详见 [CLI 安装与配置](docs/cli.md)。本地代码更新后使用 `uv tool install --reinstall .` 更新安装。
+
+## AI 调用说明
+
+让 AI 读取 [RLCD SKILL](skills/rlcd/SKILL.md)，即可按任务阶段使用 CLI 或 HTTP 上报状态。该文档包含触发场景、命令、进度与 TTL、中文渲染和失败处理规则；可复制给支持技能或自定义指令的 AI 使用。
+
+[Agent 接口文档](docs/agent.md) 保留作为协议参考。普通接入优先提供 SKILL，需要实现新客户端时再补充接口文档。
+
 ## 功能
 
 - 开机优先读取 NVS 保存的 Wi-Fi；没有有效保存配置则连接构建时指定的默认网络；未指定默认网络时直接等待 BLE 配网。
@@ -19,7 +40,7 @@ v0.5.0 支持用户提供 PNG/WAV 和 `pet.json`，通过 CLI 安装、切换宠
 
 ## Agent 中文桌宠
 
-支持宠物动画、中文状态标签、动态中文文字层、进度条和事件音效。电脑端使用 `uv run cli/rlcd.py --device http://DEVICE_IP showcase --sound` 体验，详见 [Agent 功能与 API](docs/agent.md)。
+支持宠物动画、中文状态标签、动态中文文字层、进度条和事件音效。电脑端使用 `rlcd --device http://DEVICE_IP showcase --sound` 体验，详见 [Agent 功能与 API](docs/agent.md)。
 
 ## 构建环境
 
@@ -167,7 +188,7 @@ uv run --with bleak --with pyserial validation/ble_provisioning.py /dev/cu.usbmo
 firmware/rlcd/  应用、硬件驱动与 BLE 配置
 libraries/U8g2/     图形库源码和许可证
 scripts/           构建、烧录与素材生成脚本
-cli/               Agent 接入与宠物素材管理
+src/rlcd/          可安装的 CLI 包、配置与素材管理
 pets/              可直接安装、复制修改的宠物素材包
 web/provision.html 独立配网页面
 validation/             HTTP 和配网页面验证脚本

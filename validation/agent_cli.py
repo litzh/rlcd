@@ -2,9 +2,10 @@ import importlib.util
 from pathlib import Path
 import unittest
 
-spec = importlib.util.spec_from_file_location("rlcd_cli", Path(__file__).resolve().parents[1] / "cli/rlcd.py")
-cli = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(cli)
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from rlcd import cli
+
 
 
 class TextRenderingTest(unittest.TestCase):

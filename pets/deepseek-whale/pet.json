@@ -1,0 +1,98 @@
+{
+  "format_version": 1,
+  "id": "deepseek-whale",
+  "name": "DeepSeek 鲸鱼",
+  "canvas": {
+    "width": 160,
+    "height": 128
+  },
+  "states": {
+    "idle": {
+      "frames": [
+        "idle/001.png",
+        "idle/002.png",
+        "idle/003.png",
+        "idle/004.png",
+        "idle/005.png",
+        "idle/006.png",
+        "idle/007.png",
+        "idle/008.png"
+      ],
+      "frame_ms": 200,
+      "loop": true
+    },
+    "working": {
+      "frames": [
+        "working/001.png",
+        "working/002.png",
+        "working/003.png",
+        "working/004.png",
+        "working/005.png",
+        "working/006.png",
+        "working/007.png",
+        "working/008.png"
+      ],
+      "frame_ms": 200,
+      "loop": true
+    },
+    "waiting_input": {
+      "frames": [
+        "waiting_input/001.png",
+        "waiting_input/002.png",
+        "waiting_input/003.png",
+        "waiting_input/004.png",
+        "waiting_input/005.png",
+        "waiting_input/006.png",
+        "waiting_input/007.png",
+        "waiting_input/008.png"
+      ],
+      "frame_ms": 200,
+      "loop": true,
+      "sound": "sounds/attention.wav"
+    },
+    "success": {
+      "frames": [
+        "success/001.png",
+        "success/002.png",
+        "success/003.png",
+        "success/004.png",
+        "success/005.png",
+        "success/006.png",
+        "success/007.png",
+        "success/008.png"
+      ],
+      "frame_ms": 200,
+      "loop": true,
+      "sound": "sounds/success.wav"
+    },
+    "error": {
+      "frames": [
+        "error/001.png",
+        "error/002.png",
+        "error/003.png",
+        "error/004.png",
+        "error/005.png",
+        "error/006.png",
+        "error/007.png",
+        "error/008.png"
+      ],
+      "frame_ms": 200,
+      "loop": false,
+      "sound": "sounds/error.wav"
+    },
+    "stale": {
+      "frames": [
+        "stale/001.png",
+        "stale/002.png",
+        "stale/003.png",
+        "stale/004.png",
+        "stale/005.png",
+        "stale/006.png",
+        "stale/007.png",
+        "stale/008.png"
+      ],
+      "frame_ms": 350,
+      "loop": false
+    }
+  }
+}

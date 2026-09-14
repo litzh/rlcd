@@ -1,5 +1,7 @@
 # Agent 中文桌宠（v0.5.0）
 
+如果要让 AI 在工作中自动上报状态，优先使用仓库中的 `skills/rlcd/SKILL.md`；本文作为接口与渲染协议参考。SKILL 可独立提供给 AI，必要时再读取本文。
+
 此版本在设备上播放宠物素材动画、原生绘制中文状态标签和进度条；CLI 使用电脑字体把动态中文排版为独立位图，经 HTTP 一次提交。文字不变时可只提交状态/进度。动画目标更新间隔为 125ms；实际帧率受显示传输及 HTTP 操作影响，尚未测量。
 
 ## 快速体验
@@ -7,20 +9,20 @@
 电脑安装 uv，设备运行 v0.5.0 并联网。先按照 [宠物素材指南](pet-format.md) 安装和选择宠物。以下地址替换为屏幕上的 IP：
 
 ```sh
-uv run cli/rlcd.py --device http://DEVICE_IP showcase --sound
+rlcd --device http://DEVICE_IP showcase --sound
 ```
 
 依次显示待机、分析项目、构建固件、等待输入、任务完成，每个阶段约四秒。`--sound` 请求播放所选宠物的状态音效；未配置时不播放。
 
-CLI 声明 Pillow 和 fontTools 依赖，uv 首次运行自动安装。默认查找 macOS STHeiti、Linux Noto Sans CJK、Windows 微软雅黑，也可以传 `--font /path/to/font.ttf` 或设置 `RLCD_FONT`。不会把电脑字体上传或加入仓库；字形缺失会明确报错。
+CLI 的 Pillow 和 fontTools 依赖由 uv tool install 安装到隔离环境。默认查找 macOS STHeiti、Linux Noto Sans CJK、Windows 微软雅黑，也可以传 `--font /path/to/font.ttf` 或设置 `RLCD_FONT`。不会把电脑字体上传或加入仓库；字形缺失会明确报错。
 
 ```sh
 export RLCD_DEVICE=http://DEVICE_IP
-uv run cli/rlcd.py send working --title '正在实现新功能' --detail '读取代码，准备构建和验证。' --progress 35
-uv run cli/rlcd.py send working --progress 75
-uv run cli/rlcd.py send waiting_input --title '需要你的确认' --detail '请回到电脑选择下一步操作。' --sound
-uv run cli/rlcd.py send success --title '任务完成' --progress 100 --sound
-uv run cli/rlcd.py status
+rlcd send working --title '正在实现新功能' --detail '读取代码，准备构建和验证。' --progress 35
+rlcd send working --progress 75
+rlcd send waiting_input --title '需要你的确认' --detail '请回到电脑选择下一步操作。' --sound
+rlcd send success --title '任务完成' --progress 100 --sound
+rlcd status
 ```
 
 只上报进度时，同一 Agent/任务保留之前的文字图片。传 `--title '' --detail ''` 清空文字。标题最多一行，正文最多两行，超出截断显示。标题 24px、正文 18px，按像素宽度换行。`--preview build/text.png` 保存实际上传的文字层。

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rlcd"
+version = "0.5.1"
+description = "Agent status terminal and material-driven desktop pets for RLCD"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["pillow>=11,<13", "fonttools>=4.55,<5"]
+
+[project.scripts]
+rlcd = "rlcd.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rlcd"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"pets" = "rlcd/bundled_pets"
+"docs" = "rlcd/bundled_docs"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/rlcd", "pets", "pyproject.toml", "README.md", "docs"]

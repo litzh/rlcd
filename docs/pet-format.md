@@ -8,21 +8,21 @@
 
 ```sh
 # 本地校验并生成实际黑白效果预览，不需要开发板
-uv run cli/rlcd.py pet preview pets/pixel-cat --output build/pixel-cat-preview
+rlcd pet preview pixel-cat
 
 # 地址替换成屏幕上的 IP；安装只登记资源，不切换正在显示的宠物
-uv run cli/rlcd.py --device http://DEVICE_IP pet install pets/pixel-cat
-uv run cli/rlcd.py --device http://DEVICE_IP pet use pixel-cat
-uv run cli/rlcd.py --device http://DEVICE_IP pet list
+rlcd --device http://DEVICE_IP pet install pixel-cat
+rlcd --device http://DEVICE_IP pet use pixel-cat
+rlcd --device http://DEVICE_IP pet list
 
 # 上报状态或依次体验各状态
-uv run cli/rlcd.py --device http://DEVICE_IP send working --title '正在处理任务' --progress 35
-uv run cli/rlcd.py --device http://DEVICE_IP showcase --sound
+rlcd --device http://DEVICE_IP send working --title '正在处理任务' --progress 35
+rlcd --device http://DEVICE_IP showcase --sound
 ```
 
 也可以设置环境变量 `RLCD_DEVICE=http://DEVICE_IP`，省略后续命令的 `--device`。
 
-`preview` 输出六个状态 GIF 和 `overview.png`。总览从左到右、从上到下为 idle、working、waiting_input、success、error、stale；GIF 按配置播放。CLI 首次运行由 uv 安装声明的依赖。
+`preview` 输出六个状态 GIF 和 `overview.png`。总览从左到右、从上到下为 idle、working、waiting_input、success、error、stale；GIF 按配置播放。CLI 依赖在安装时由 uv 管理。
 
 ## 创建自己的宠物
 
@@ -98,7 +98,7 @@ my-pet/
 
 文件内容为 4 字节 ASCII `RLP1`、4 字节小端 JSON 长度、UTF-8 JSON（最多 4096 字节）、连续单色帧数据。每帧固定 2560 字节：160×128，逐行，每字节最低位对应左边像素，1 表示黑点。
 
-JSON 包含 `id`、`name` 和固定六项的 `states` 数组，顺序与上文一致。每项包含 `offset`（相对帧数据起点的字节偏移）、`count`、`frame_ms`、`loop`、`sound`（SD 绝对路径，未配置为 ""）。各段必须连续且刚好覆盖文件尾，避免读取越界或多余数据。通常应直接复用 `cli/pet_assets.py`，不要手工生成此格式。
+JSON 包含 `id`、`name` 和固定六项的 `states` 数组，顺序与上文一致。每项包含 `offset`（相对帧数据起点的字节偏移）、`count`、`frame_ms`、`loop`、`sound`（SD 绝对路径，未配置为 ""）。各段必须连续且刚好覆盖文件尾，避免读取越界或多余数据。通常应直接复用 `src/rlcd/pet_assets.py`，不要手工生成此格式。
 
 ## 开发验证
 

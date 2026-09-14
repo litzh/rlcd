@@ -1,8 +1,4 @@
-# /// script
-# requires-python = ">=3.10"
-# dependencies = ["pillow>=11,<13", "fonttools>=4.55,<5"]
-# ///
-"""RLCD Agent CLI. Run with uv run cli/rlcd.py --help."""
+"""RLCD Agent CLI. Run rlcd --help."""
 import argparse
 import json
 import os
@@ -14,6 +10,7 @@ import urllib.request
 
 from PIL import Image, ImageDraw, ImageFont
 from fontTools.ttLib import TTFont
+from . import config
 
 STATES = ("idle", "working", "waiting_input", "success", "error")
 WIDTH, HEIGHT = 384, 80
@@ -113,14 +110,21 @@ class Device:
 
 def main():
     parser = argparse.ArgumentParser(description="通过 HTTP 展示 Agent 桌宠和中文任务文字")
-    parser.add_argument("--device", default=os.environ.get("RLCD_DEVICE"))
+    parser.add_argument("--device")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("status")
+    settings = commands.add_parser("config", help="管理 ~/.config/rlcd 配置")
+    settings_commands = settings.add_subparsers(dest="config_command", required=True)
+    settings_commands.add_parser("show")
+    settings_commands.add_parser("init")
+    setter = settings_commands.add_parser("set")
+    setter.add_argument("key", choices=("device", "font"))
+    setter.add_argument("value")
     pet = commands.add_parser("pet", help="管理宠物素材包")
     pet_commands = pet.add_subparsers(dest="pet_command", required=True)
     preview = pet_commands.add_parser("preview")
     preview.add_argument("folder")
-    preview.add_argument("--output", default="build/pet-preview")
+    preview.add_argument("--output")
     install = pet_commands.add_parser("install")
     install.add_argument("folder")
     use = pet_commands.add_parser("use")
@@ -141,19 +145,38 @@ def main():
         sub.add_argument("--preview", help="保存实际上传的文字层 PNG")
         sub.add_argument("--sound", action="store_true", help="状态切换时请求播放当前宠物音效")
     args = parser.parse_args()
+    try:
+        if args.command == "config":
+            if args.config_command == "init":
+                config.seed_pets()
+            elif args.config_command == "set":
+                config.set_value(args.key, args.value)
+            print(json.dumps({"directory": str(config.home()), "settings": config.read()}, ensure_ascii=False, indent=2))
+            return
+        values = config.read()
+        args.device = args.device or os.environ.get("RLCD_DEVICE") or values.get("device")
+        if hasattr(args, "font"):
+            args.font = args.font or os.environ.get("RLCD_FONT") or values.get("font")
+        if args.command == "pet" and args.pet_command in ("preview", "install"):
+            args.folder = config.pet_folder(args.folder)
+            if args.pet_command == "preview" and not args.output:
+                from .pet_assets import compile_pet
+                args.output = config.home()/"previews"/compile_pet(args.folder)[0]["id"]
+    except (ValueError, OSError) as error:
+        parser.exit(1, str(error) + "\n")
     if args.command == "pet" and args.pet_command == "preview":
-        from pet_assets import preview_pet
+        from .pet_assets import preview_pet
         try:
             preview_pet(args.folder, args.output)
         except (ValueError, OSError) as error:
             parser.exit(1, str(error) + "\n")
         return
     if not args.device:
-        parser.error("请设置 --device http://IP 或 RLCD_DEVICE")
+        parser.error("请运行 rlcd config set device http://IP，或设置 --device / RLCD_DEVICE")
     try:
         device = Device(args.device)
         if args.command == "pet":
-            from pet_assets import install_pet
+            from .pet_assets import install_pet
             if args.pet_command == "install":
                 install_pet(device, args.folder)
             elif args.pet_command == "use":

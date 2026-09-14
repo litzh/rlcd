@@ -7,9 +7,9 @@ import time
 import urllib.error
 
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'cli'))
-from rlcd import Device
-from pet_assets import install_pet, upload
+sys.path.insert(0,str(ROOT/'src'))
+from rlcd.cli import Device
+from rlcd.pet_assets import install_pet, upload
 
 d=Device(sys.argv[1])
 def get(): return json.loads(d.request('/pets'))

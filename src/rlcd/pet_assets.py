@@ -160,6 +160,11 @@ def upload(device, path, data):
 
 def install_pet(device, folder):
     header, package, path, sounds, _ = compile_pet(folder)
+    from .config import home
+    cache = home()/'packages'/header['id']
+    cache.mkdir(parents=True, exist_ok=True)
+    for target, data in {**sounds, path: package}.items():
+        (cache/Path(target).name).write_bytes(data)
     for target,data in sounds.items(): upload(device,target,data)
     upload(device,path,package)
     result = device.request('/pets/register',json.dumps({'path':path}).encode(),'POST')

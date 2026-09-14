@@ -8,8 +8,10 @@ import tempfile
 import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
-spec=importlib.util.spec_from_file_location('pet_assets',ROOT/'cli/pet_assets.py')
-assets=importlib.util.module_from_spec(spec); spec.loader.exec_module(assets)
+import sys
+sys.path.insert(0,str(ROOT/'src'))
+from rlcd import pet_assets as assets
+
 
 class Materials(unittest.TestCase):
     def test_package_pixels_and_sound(self):
