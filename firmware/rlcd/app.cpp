@@ -2,6 +2,7 @@
 #include "config.h"
 #include "media.h"
 #include "agent_display.h"
+#include "pet_player.h"
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <WebServer.h>
@@ -296,7 +297,7 @@ static void sampleSensors() {
 }
 static String statusJson() {
   cJSON *j = cJSON_CreateObject();
-  cJSON_AddStringToObject(j, "firmware", "rlcd-0.4.0");
+  cJSON_AddStringToObject(j, "firmware", "rlcd-0.5.0");
   cJSON_AddItemToObject(j, "audio", mediaAudioStatus());
   cJSON_AddItemToObject(j, "sd", mediaSDStatus());
   cJSON_AddItemToObject(j, "buttons", mediaButtonsStatus());
@@ -341,6 +342,7 @@ static String statusJson() {
 static void httpSetup() {
   mediaRoutes(http);
   agentRoutes(http);
+  petRoutes(http);
   buttonsRoutes(http);
   http.on("/status", HTTP_GET, [] { http.send(200, "application/json", statusJson()); });
   http.on("/echo", HTTP_POST, [] {
@@ -465,6 +467,7 @@ void appSetup() {
   sensorCommand(0x805d);
   delay(20);
   mediaSetup();
+  petSetup();
   mediaStartButtons([] { pageRequests.fetch_add(1); }, [] { provisionRequested.store(true); });
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
@@ -530,7 +533,8 @@ void appLoop() {
   networkTick();
   http.handleClient();
   mediaAfterHttp();
-  if (agentTakeFocus()) {
+  bool petFocus = petTakeFocus();
+  if (agentTakeFocus() || petFocus) {
     page = 3;
     lastScreen = 0;
   }

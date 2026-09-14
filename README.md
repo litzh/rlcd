@@ -13,9 +13,13 @@
 - v0.3.0 增加录音、WAV 播放、音量、SD 文件管理和按键事件 API，见 [音频/SD/按键文档](docs/media-api.md)。
 - KEY 单击录音/停止、双击播放最近录音；BOOT 单击切换网络/传感器/音频/宠物页面，长按三秒仍用于配网。
 
+## 宠物素材包
+
+v0.5.0 支持用户提供 PNG/WAV 和 `pet.json`，通过 CLI 安装、切换宠物，无需修改固件。随附 `pets/pixel-cat`，见 [素材规范与接入指南](docs/pet-format.md)。先执行 `pet install`、`pet use`，再上报 Agent 状态。
+
 ## Agent 中文桌宠
 
-v0.4.0 增加原生猫动画、中文状态标签、动态中文文字层、进度条和事件提示音。电脑端使用 `uv run cli/rlcd.py --device http://DEVICE_IP showcase --sound` 体验，详见 [Agent 功能与 API](docs/agent.md)。
+支持宠物动画、中文状态标签、动态中文文字层、进度条和事件音效。电脑端使用 `uv run cli/rlcd.py --device http://DEVICE_IP showcase --sound` 体验，详见 [Agent 功能与 API](docs/agent.md)。
 
 ## 构建环境
 
@@ -162,7 +166,9 @@ uv run --with bleak --with pyserial validation/ble_provisioning.py /dev/cu.usbmo
 ```text
 firmware/rlcd/  应用、硬件驱动与 BLE 配置
 libraries/U8g2/     图形库源码和许可证
-scripts/           构建、烧录脚本
+scripts/           构建、烧录与素材生成脚本
+cli/               Agent 接入与宠物素材管理
+pets/              可直接安装、复制修改的宠物素材包
 web/provision.html 独立配网页面
 validation/             HTTP 和配网页面验证脚本
 docs/              蓝牙协议与验证说明

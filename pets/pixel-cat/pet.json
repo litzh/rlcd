@@ -1,0 +1,74 @@
+{
+  "format_version": 1,
+  "id": "pixel-cat",
+  "name": "像素猫",
+  "canvas": {
+    "width": 160,
+    "height": 128
+  },
+  "states": {
+    "idle": {
+      "frames": [
+        "idle/001.png",
+        "idle/002.png",
+        "idle/003.png",
+        "idle/004.png"
+      ],
+      "frame_ms": 250,
+      "loop": true
+    },
+    "working": {
+      "frames": [
+        "working/001.png",
+        "working/002.png",
+        "working/003.png",
+        "working/004.png"
+      ],
+      "frame_ms": 250,
+      "loop": true
+    },
+    "waiting_input": {
+      "frames": [
+        "waiting_input/001.png",
+        "waiting_input/002.png",
+        "waiting_input/003.png",
+        "waiting_input/004.png"
+      ],
+      "frame_ms": 250,
+      "loop": true,
+      "sound": "sounds/attention.wav"
+    },
+    "success": {
+      "frames": [
+        "success/001.png",
+        "success/002.png",
+        "success/003.png",
+        "success/004.png"
+      ],
+      "frame_ms": 250,
+      "loop": true,
+      "sound": "sounds/success.wav"
+    },
+    "error": {
+      "frames": [
+        "error/001.png",
+        "error/002.png",
+        "error/003.png",
+        "error/004.png"
+      ],
+      "frame_ms": 250,
+      "loop": false,
+      "sound": "sounds/error.wav"
+    },
+    "stale": {
+      "frames": [
+        "stale/001.png",
+        "stale/002.png",
+        "stale/003.png",
+        "stale/004.png"
+      ],
+      "frame_ms": 250,
+      "loop": false
+    }
+  }
+}

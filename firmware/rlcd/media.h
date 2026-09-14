@@ -13,4 +13,6 @@ void mediaKeyClick();
 void mediaKeyDouble();
 void mediaStartButtons(void (*bootClick)(), void (*bootLong)());
 void mediaScreen(String &state, String &file, String &detail);
-int mediaPlayCue();
+bool mediaReadAsset(const String &path, uint8_t *&data, size_t &length, size_t maximum);
+bool mediaValidSound(const String &path);
+int mediaPlaySound(const String &path);

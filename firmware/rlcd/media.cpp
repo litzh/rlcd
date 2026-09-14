@@ -714,4 +714,32 @@ void mediaRoutes(WebServer &s) {
       });
 }
 
-int mediaPlayCue() { return start(false, "/agent-chime-v1.wav"); }
+bool mediaReadAsset(const String &path, uint8_t *&data, size_t &length, size_t maximum) {
+  Guard guard;
+  data = nullptr;
+  length = 0;
+  if (!mounted || !pathOK(path) || lockedPath(path))
+    return false;
+  File file = SD_MMC.open(path, FILE_READ);
+  if (!file || file.isDirectory() || !file.size() || file.size() > maximum)
+    return false;
+  length = file.size();
+  data = (uint8_t *)ps_malloc(length);
+  if (!data)
+    return false;
+  if (file.read(data, length) != length) {
+    free(data);
+    data = nullptr;
+    return false;
+  }
+  return true;
+}
+bool mediaValidSound(const String &path) {
+  Guard guard;
+  if (!mounted || !pathOK(path) || lockedPath(path))
+    return false;
+  File file = SD_MMC.open(path, FILE_READ);
+  uint32_t offset, length;
+  return file && !file.isDirectory() && wavInfo(file, offset, length) && length <= 160000;
+}
+int mediaPlaySound(const String &path) { return start(false, path); }

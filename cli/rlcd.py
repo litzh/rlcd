@@ -4,17 +4,13 @@
 # ///
 """RLCD Agent CLI. Run with uv run cli/rlcd.py --help."""
 import argparse
-import io
 import json
-import math
 import os
 from pathlib import Path
-import struct
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import wave
 
 from PIL import Image, ImageDraw, ImageFont
 from fontTools.ttLib import TTFont
@@ -114,45 +110,22 @@ class Device:
         print(json.dumps(result, ensure_ascii=False))
         return result
 
-    def prepare(self):
-        # Short quiet two-note cue, matching the firmware's supported PCM format.
-        output = io.BytesIO()
-        with wave.open(output, "wb") as wav:
-            wav.setnchannels(1); wav.setsampwidth(2); wav.setframerate(16000)
-            samples = []
-            for i in range(6400):
-                position = i % 3200
-                envelope = min(1, position / 160, (3199 - position) / 320)
-                frequency = 660 if i < 3200 else 880
-                samples.append(int(5000 * envelope * math.sin(2 * math.pi * frequency * i / 16000)))
-            wav.writeframes(struct.pack("<" + "h" * len(samples), *samples))
-        data = output.getvalue()
-        path = "/sd/file?path=/agent-chime-v1.wav"
-        try:
-            existing = self.request(path)
-        except urllib.error.HTTPError as error:
-            if error.code != 404:
-                raise
-        else:
-            if existing != data:
-                raise ValueError("提示音路径已有其他内容，未覆盖，请先检查 /agent-chime-v1.wav")
-            print("提示音已存在且校验一致")
-            return
-        boundary = "rlcd-agent-cue-upload"
-        body = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="cue.wav"\r\n'
-                'Content-Type: audio/wav\r\n\r\n').encode() + data + f'\r\n--{boundary}--\r\n'.encode()
-        self.request(path, body, "POST", "multipart/form-data; boundary=" + boundary)
-        if self.request(path) != data:
-            raise ValueError("提示音上传后校验失败")
-        print("提示音上传并校验通过")
-
 
 def main():
     parser = argparse.ArgumentParser(description="通过 HTTP 展示 Agent 桌宠和中文任务文字")
     parser.add_argument("--device", default=os.environ.get("RLCD_DEVICE"))
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("status")
-    commands.add_parser("prepare", help="向 SD 上传提示音，保留已有文件")
+    pet = commands.add_parser("pet", help="管理宠物素材包")
+    pet_commands = pet.add_subparsers(dest="pet_command", required=True)
+    preview = pet_commands.add_parser("preview")
+    preview.add_argument("folder")
+    preview.add_argument("--output", default="build/pet-preview")
+    install = pet_commands.add_parser("install")
+    install.add_argument("folder")
+    use = pet_commands.add_parser("use")
+    use.add_argument("id")
+    pet_commands.add_parser("list")
     for command in ("send", "showcase"):
         sub = commands.add_parser(command)
         if command == "send":
@@ -166,23 +139,34 @@ def main():
         sub.add_argument("--progress", type=int, choices=range(101), metavar="0..100")
         sub.add_argument("--font")
         sub.add_argument("--preview", help="保存实际上传的文字层 PNG")
-        sub.add_argument("--sound", action="store_true", help="状态切换时请求播放已安装提示音")
+        sub.add_argument("--sound", action="store_true", help="状态切换时请求播放当前宠物音效")
     args = parser.parse_args()
+    if args.command == "pet" and args.pet_command == "preview":
+        from pet_assets import preview_pet
+        try:
+            preview_pet(args.folder, args.output)
+        except (ValueError, OSError) as error:
+            parser.exit(1, str(error) + "\n")
+        return
     if not args.device:
         parser.error("请设置 --device http://IP 或 RLCD_DEVICE")
     try:
         device = Device(args.device)
-        if args.command == "status":
+        if args.command == "pet":
+            from pet_assets import install_pet
+            if args.pet_command == "install":
+                install_pet(device, args.folder)
+            elif args.pet_command == "use":
+                print(device.request("/pets/use", json.dumps({"id": args.id}).encode(), "POST").decode())
+            else:
+                print(device.request("/pets").decode())
+        elif args.command == "status":
             print(json.dumps(device.status(), ensure_ascii=False, indent=2))
-        elif args.command == "prepare":
-            device.prepare()
         elif args.command == "send":
             device.send(args)
         else:
             if args.seq is not None:
                 raise ValueError("showcase 自动生成序号，不接受 --seq")
-            if args.sound:
-                device.prepare()
             for state, title, detail, progress in [
                 ("idle", "你好，我是你的桌面伙伴", "随时准备接收 Agent 的任务状态。", None),
                 ("working", "正在分析项目", "读取代码与文档，整理实现步骤。", 20),

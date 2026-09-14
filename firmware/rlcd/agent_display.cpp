@@ -1,5 +1,6 @@
 #include "agent_display.h"
 #include "media.h"
+#include "pet_player.h"
 #include <cmath>
 #include <cstring>
 
@@ -130,9 +131,11 @@ void agentRoutes(WebServer &s) {
     received = true;
     focus = true;
     soundCode = 0;
-    if (transition && cJSON_IsTrue(sound) &&
-        (state == "waiting_input" || state == "success" || state == "error"))
-      soundCode = mediaPlayCue();
+    if (transition) {
+      petTransition();
+      if (cJSON_IsTrue(sound))
+        soundCode = petSound(state);
+    }
     cJSON_Delete(j);
     s.send(200, "application/json", encode(agentStatus()));
   });
@@ -148,40 +151,13 @@ void agentDraw(U8G2 &d, const String &ip, bool provisioning) {
   const bool stale = expired();
   const int index = stateIndex(state);
   const uint32_t frame = millis() / 125;
-  int bounce = !stale && (state == "working" || state == "success") ? (frame % 8 < 4 ? 0 : 3) : 0;
-  const int x = 200, y = 92 + bounce;
   d.clearBuffer();
   d.setDrawColor(1);
   d.setFont(u8g2_font_unifont_t_gb2312);
   d.drawUTF8(12, 23, stale ? "状态已过期" : labels[index]);
   d.setFont(u8g2_font_6x13_tf);
   d.drawStr(268, 21, ip.c_str());
-  // Cat silhouette, ears and tail, drawn locally at 8 target frames per second.
-  d.drawRFrame(x - 46, y - 32, 92, 70, 18);
-  d.drawTriangle(x - 43, y - 20, x - 41, y - 52, x - 18, y - 31);
-  d.drawTriangle(x + 43, y - 20, x + 41, y - 52, x + 18, y - 31);
-  bool blink = stale || state == "idle" && frame % 32 > 29;
-  for (int eye : {-18, 18}) {
-    if (state == "error") {
-      d.drawLine(x + eye - 4, y - 7, x + eye + 4, y + 1);
-      d.drawLine(x + eye - 4, y + 1, x + eye + 4, y - 7);
-    } else if (blink)
-      d.drawHLine(x + eye - 5, y - 3, 10);
-    else
-      d.drawDisc(x + eye, y - 3, state == "waiting_input" ? 5 : 3);
-  }
-  d.drawTriangle(x - 3, y + 8, x + 3, y + 8, x, y + 11);
-  d.drawLine(x, y + 11, x - 6, y + 16);
-  d.drawLine(x, y + 11, x + 6, y + 16);
-  d.drawLine(x - 35, y + 10, x - 55, y + 6);
-  d.drawLine(x + 35, y + 10, x + 55, y + 6);
-  d.drawRFrame(x - 28, y + 38, 56, 22, 8);
-  d.drawLine(x + 28, y + 50, x + 58, y + 40 + (frame % 8 < 4 ? 0 : 8));
-  d.setFont(u8g2_font_helvB18_tr);
-  if (!stale && state == "waiting_input")
-    d.drawStr(275, 100, frame % 8 < 4 ? "?" : "!");
-  if (!stale && state == "success")
-    d.drawStr(275, 100, "OK");
+  petDraw(d, stale ? "stale" : state);
   d.drawXBMP(8, 159, 384, 80, pixels);
   d.drawFrame(12, 245, 376, 10);
   if (!stale && progress >= 0)
