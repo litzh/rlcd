@@ -106,7 +106,7 @@ curl -X DELETE 'http://DEVICE_IP/sd/file?path=/recordings/hello.wav'
 | 按键 | 单击 | 双击 | 长按 |
 | --- | --- | --- | --- |
 | KEY（GPIO18） | 空闲时录音；录音/播放时停止 | 播放最近成功录音 | 1 秒生成事件，不绑定动作 |
-| BOOT（GPIO0） | 切换网络、传感器、音频页面 | 仅生成事件 | 3 秒开放 BLE 配网 |
+| BOOT（GPIO0） | 切换网络、传感器、音频、宠物页面（v0.4.0） | 仅生成事件 | 3 秒开放 BLE 配网 |
 
 只在固件运行中使用 BOOT 长按，上电时按住 BOOT 会进入下载模式。单击等待双击判定窗口后执行，因此约有 350ms 延迟；消抖 30ms。长按不会额外触发单击。
 
@@ -134,17 +134,17 @@ curl 'http://DEVICE_IP/buttons/events?after=0'
 | 503 | SD 或音频硬件不可用 |
 | 507 | 空间不足或写入失败 |
 
-## 测试
+## 验证
 
 ```sh
-uv run tests/media_smoke.py http://DEVICE_IP
-c++ -std=c++11 tests/button_logic.cpp -o /tmp/rlcd-buttons && /tmp/rlcd-buttons
+uv run validation/media_api.py http://DEVICE_IP
+c++ -std=c++11 validation/button_logic.cpp -o /tmp/rlcd-buttons && /tmp/rlcd-buttons
 ```
 
-实机脚本只使用唯一命名的测试文件，会播放低音量提示音、录制短音频并清理本轮文件；会更新“最近录音”选择，建议在用户正式录音前运行。按键逻辑测试覆盖消抖、单击/双击、长按抑制单击和毫秒计时回绕。
+实机脚本只使用唯一命名的验证文件，会播放低音量提示音、录制短音频并清理本轮文件；会更新“最近录音”选择，建议在用户正式录音前运行。按键逻辑验证覆盖消抖、单击/双击、长按抑制单击和毫秒计时回绕。
 
 ## 驱动来源
 
-`firmware/rlcd_demo/src/esp_codec_dev` 从官方 Arduino `07_Audio_Test` 随附驱动复制，保留其 Apache-2.0 许可证与头部声明。本项目在 I2S 读写返回处增加完整字节数校验。仅复用编解码器驱动，未引入官方 LVGL 界面或音乐素材。
+`firmware/rlcd/src/esp_codec_dev` 从官方 Arduino `07_Audio_Test` 随附驱动复制，保留其 Apache-2.0 许可证与头部声明。本项目在 I2S 读写返回处增加完整字节数校验。仅复用编解码器驱动，未引入官方 LVGL 界面或音乐素材。
 
 硬件音频引脚：MCLK16、BCLK9、WS45、DOUT8、DIN10、PA46；I2C 复用 SDA13/SCL14，ES8311 地址 0x18、ES7210 地址 0x40。SDMMC 为 CLK38、CMD21、D0 39，1-bit 模式。

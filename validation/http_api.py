@@ -1,4 +1,4 @@
-"""运行: uv run tests/http_smoke.py http://设备IP"""
+"""运行: uv run validation/http_api.py http://设备IP"""
 import json
 import sys
 import urllib.error

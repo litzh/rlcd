@@ -1,4 +1,4 @@
 /build/
-/firmware/rlcd_demo/wifi_defaults.h
+/firmware/rlcd/wifi_defaults.h
 __pycache__/
 .DS_Store

@@ -13,3 +13,4 @@ void mediaKeyClick();
 void mediaKeyDouble();
 void mediaStartButtons(void (*bootClick)(), void (*bootLong)());
 void mediaScreen(String &state, String &file, String &detail);
+int mediaPlayCue();

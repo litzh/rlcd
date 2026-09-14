@@ -1,6 +1,7 @@
 #include "ST7305_U8g2.h"
 #include "config.h"
 #include "media.h"
+#include "agent_display.h"
 #include <WiFi.h>
 #include <esp_wifi.h>
 #include <WebServer.h>
@@ -295,7 +296,7 @@ static void sampleSensors() {
 }
 static String statusJson() {
   cJSON *j = cJSON_CreateObject();
-  cJSON_AddStringToObject(j, "firmware", "rlcd-0.3.0");
+  cJSON_AddStringToObject(j, "firmware", "rlcd-0.4.0");
   cJSON_AddItemToObject(j, "audio", mediaAudioStatus());
   cJSON_AddItemToObject(j, "sd", mediaSDStatus());
   cJSON_AddItemToObject(j, "buttons", mediaButtonsStatus());
@@ -339,6 +340,7 @@ static String statusJson() {
 }
 static void httpSetup() {
   mediaRoutes(http);
+  agentRoutes(http);
   buttonsRoutes(http);
   http.on("/status", HTTP_GET, [] { http.send(200, "application/json", statusJson()); });
   http.on("/echo", HTTP_POST, [] {
@@ -377,6 +379,11 @@ static String ascii(const String &s) {
   return output;
 }
 static void drawScreen() {
+  if (page == 3) {
+    agentDraw(*display, WiFi.localIP().toString(), bleEnabled);
+    lastScreen = millis();
+    return;
+  }
   display->clearBuffer();
   display->setDrawColor(1);
   display->setFont(u8g2_font_helvB18_tr);
@@ -523,16 +530,20 @@ void appLoop() {
   networkTick();
   http.handleClient();
   mediaAfterHttp();
+  if (agentTakeFocus()) {
+    page = 3;
+    lastScreen = 0;
+  }
   unsigned changes = pageRequests.exchange(0);
   if (changes) {
-    page = (page + changes) % 3;
+    page = (page + changes) % 4;
     lastScreen = 0;
   }
   if (provisionRequested.exchange(false))
     enableProvisioning();
   if (millis() - lastSensors >= 5000)
     sampleSensors();
-  if (millis() - lastScreen >= 1000)
+  if (millis() - lastScreen >= (page == 3 ? 125u : 1000u))
     drawScreen();
   delay(2);
 }

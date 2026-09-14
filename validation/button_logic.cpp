@@ -1,4 +1,4 @@
-#include "../firmware/rlcd_demo/button_logic.h"
+#include "../firmware/rlcd/button_logic.h"
 #include <cassert>
 #include <cstdio>
 int main() {

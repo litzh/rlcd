@@ -27,7 +27,7 @@ public:
   ~ST7305_U8g2();
 
   // tile_buf_height 0 means full-buffer mode, about 15 KB RAM for 300x400.
-  // A smaller value can be used with firstPage()/nextPage(), but this demo uses full-buffer mode.
+  // A smaller value can be used with firstPage()/nextPage(), but this firmware uses full-buffer mode.
   void begin(uint8_t tile_buf_height = 0, const u8g2_cb_t *rotation = U8G2_R0);
   void reset();
   void fullInit();

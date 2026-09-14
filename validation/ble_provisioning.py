@@ -13,7 +13,7 @@ async def main():
     ssid = os.environ.get("RLCD_WIFI_SSID", "")
     password = os.environ.get("RLCD_WIFI_PASSWORD", "")
     if not ssid:
-        raise SystemExit("Set RLCD_WIFI_SSID before running this device test")
+        raise SystemExit("Set RLCD_WIFI_SSID before running this device validation")
     with serial.Serial(sys.argv[1], 115200, timeout=1) as console:
         console.write(b'provision\n')
         for _ in range(5):
@@ -40,7 +40,7 @@ async def main():
         await asyncio.sleep(1)
         assert (await read())['result'] == 'invalid_credentials'
         print('PASS invalid credentials', flush=True)
-        await send({'ssid':'RLCD-Test-Nonexistent-9A71', 'password':'wrongtest123'})
+        await send({'ssid':'RLCD-Check-Nonexistent-9A71', 'password':'invalidpass123'})
         await asyncio.sleep(23)
         failed=await read()
         print('Failed network:', failed, flush=True)
@@ -59,7 +59,7 @@ async def main():
         console.write(b'provision\n')
         await asyncio.sleep(2)
     async with BleakClient(device) as client:
-        await send({'ssid':'RLCD-Test-Nonexistent-9A71', 'password':'wrongtest123'})
+        await send({'ssid':'RLCD-Check-Nonexistent-9A71', 'password':'invalidpass123'})
         await asyncio.sleep(23)
         assert (await read())['result']=='connection_failed'
         print('PASS failure after saved credentials; reboot to verify retention', flush=True)

@@ -10,4 +10,4 @@ bash "$PROJECT_DIR/scripts/build.sh"
 exec arduino-cli upload \
   --fqbn 'esp32:esp32:esp32s3:CDCOnBoot=cdc,FlashSize=16M,PSRAM=opi,PartitionScheme=app3M_fat9M_16MB' \
   --port "$1" --input-dir "$PROJECT_DIR/build" \
-  "$PROJECT_DIR/firmware/rlcd_demo"
+  "$PROJECT_DIR/firmware/rlcd"

@@ -1,4 +1,4 @@
-"""uv run tests/media_edges.py http://DEVICE_IP -- tests only unique temporary files."""
+"""uv run validation/media_edges.py http://DEVICE_IP -- checks only unique temporary files."""
 import json,socket,time,urllib.request,urllib.error,urllib.parse,uuid,sys,struct
 base=sys.argv[1].rstrip('/')
 url=urllib.parse.urlsplit(base)
@@ -12,13 +12,13 @@ def call(path,method='GET',data=None,expected=200,ct='application/json'):
     return json.loads(payload) if 'json' in r.headers.get('Content-Type','') else payload
 
 def part(data,boundary,tail=True):
-    return (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="test.bin"\r\n\r\n').encode()+data+(f'\r\n--{boundary}--\r\n'.encode() if tail else b'')
+    return (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="sample.bin"\r\n\r\n').encode()+data+(f'\r\n--{boundary}--\r\n'.encode() if tail else b'')
 def upload(path,data,expected=200):
-    boundary='test-'+uuid.uuid4().hex
+    boundary='check-'+uuid.uuid4().hex
     return call('/sd/file?path='+path,'POST',part(data,boundary),expected,'multipart/form-data; boundary='+boundary)
 
 # Disconnect in the middle of a multipart file, then check that no final file was published.
-boundary='abort-test'
+boundary='abort-check'
 payload=part(b'x'*4096,boundary,False)
 request=(f'POST /sd/file?path={name}.bin HTTP/1.1\r\nHost: {url.hostname}\r\nContent-Type: multipart/form-data; boundary={boundary}\r\nContent-Length: 99999\r\n\r\n').encode()+payload
 with socket.create_connection((url.hostname,url.port or 80),timeout=5) as s:s.sendall(request)

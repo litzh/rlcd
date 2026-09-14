@@ -1,5 +1,5 @@
-"""uv run tests/media_smoke.py http://DEVICE_IP
-Writes uniquely named test files only. Plays a quiet two-second test tone.
+"""uv run validation/media_api.py http://DEVICE_IP
+Writes uniquely named temporary files only. Plays a quiet two-second notification tone.
 """
 import array
 import hashlib
@@ -30,8 +30,8 @@ def call(path, method='GET', obj=None, expected=200, raw=None, content_type='app
 
 def path_arg(path): return urllib.parse.quote(path, safe='')
 def upload(path, data, expected=200):
-    boundary = 'rlcd-test-' + uuid.uuid4().hex
-    payload = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="test.wav"\r\nContent-Type: application/octet-stream\r\n\r\n').encode() + data + f'\r\n--{boundary}--\r\n'.encode()
+    boundary = 'rlcd-check-' + uuid.uuid4().hex
+    payload = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="sample.wav"\r\nContent-Type: application/octet-stream\r\n\r\n').encode() + data + f'\r\n--{boundary}--\r\n'.encode()
     return call('/sd/file?path=' + path_arg(path), 'POST', raw=payload, expected=expected, content_type='multipart/form-data; boundary=' + boundary)
 
 def idle(timeout=12):
@@ -49,7 +49,7 @@ assert status['sd']['mounted'], status
 assert status['audio']['ready'], status
 assert status['buttons']['ready'], status
 print('Hardware ready', flush=True)
-name = '/api-test-' + uuid.uuid4().hex[:10]
+name = '/api-check-' + uuid.uuid4().hex[:10]
 p = name + '.wav'
 rpath = '/recordings' + name + '.wav'
 stop_path = '/recordings' + name + '-stop.wav'
@@ -96,7 +96,7 @@ try:
     call('/buttons/events?after=-1',expected=400)
     print('PASS record/finalize/replay/stop, activity conflicts, WAV validation, paths, button APIs',flush=True)
 finally:
-    # Only clean up this run's test files; never enumerate/delete user files.
+    # Only clean up this run's temporary files; never enumerate/delete user files.
     for path in created:
         try: call('/sd/file?path='+path_arg(path),'DELETE')
         except Exception as e: print('Cleanup pending:',path,e)

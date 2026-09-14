@@ -16,13 +16,13 @@ spec.loader.exec_module(config)
 class BuildConfigTest(unittest.TestCase):
     def test_validation(self):
         self.assertEqual(config.credentials({}), ("", ""))
-        self.assertEqual(config.credentials({"RLCD_WIFI_SSID": "test"}), ("test", ""))
+        self.assertEqual(config.credentials({"RLCD_WIFI_SSID": "fixture"}), ("fixture", ""))
         config.credentials({"RLCD_WIFI_SSID": "网络", "RLCD_WIFI_PASSWORD": "a" * 64})
         for env in (
             {"RLCD_WIFI_PASSWORD": "abcdefgh"},
             {"RLCD_WIFI_SSID": "网" * 11},
-            {"RLCD_WIFI_SSID": "test", "RLCD_WIFI_PASSWORD": "short"},
-            {"RLCD_WIFI_SSID": "test", "RLCD_WIFI_PASSWORD": "g" * 64},
+            {"RLCD_WIFI_SSID": "fixture", "RLCD_WIFI_PASSWORD": "short"},
+            {"RLCD_WIFI_SSID": "fixture", "RLCD_WIFI_PASSWORD": "g" * 64},
             {"RLCD_WIFI_SSID": "nul\0"},
         ):
             with self.assertRaises(ValueError):
@@ -35,12 +35,12 @@ class BuildConfigTest(unittest.TestCase):
             header = Path(directory) / "defaults.h"
             command = [sys.executable, str(GENERATOR), str(header)]
             subprocess.run(command, env=dict(env, RLCD_WIFI_SSID=value), check=True)
-            source = Path(directory) / "test.cpp"
+            source = Path(directory) / "check.cpp"
             expected = ",".join(str(b) for b in value.encode()) + ",0"
             source.write_text('#include "defaults.h"\n#include <cstring>\n'
                               f'int main() {{ unsigned char expected[] = {{{expected}}}; '
                               'return std::strcmp(DEFAULT_SSID, (char*)expected); }\n')
-            binary = Path(directory) / "test"
+            binary = Path(directory) / "fixture"
             subprocess.run(["c++", str(source), "-o", str(binary)], check=True)
             subprocess.run([str(binary)], check=True)
             subprocess.run(command, env=env, check=True)

@@ -11,7 +11,11 @@
 - 屏幕显示英文联网状态、SSID、IP、HTTP 端口、温湿度、电池电压和最新 echo 消息。
 - HTTP 80 端口提供 `POST /echo` 和 `GET /status`。
 - v0.3.0 增加录音、WAV 播放、音量、SD 文件管理和按键事件 API，见 [音频/SD/按键文档](docs/media-api.md)。
-- KEY 单击录音/停止、双击播放最近录音；BOOT 单击切换网络/传感器/音频页面，长按三秒仍用于配网。
+- KEY 单击录音/停止、双击播放最近录音；BOOT 单击切换网络/传感器/音频/宠物页面，长按三秒仍用于配网。
+
+## Agent 中文桌宠
+
+v0.4.0 增加原生猫动画、中文状态标签、动态中文文字层、进度条和事件提示音。电脑端使用 `uv run cli/rlcd.py --device http://DEVICE_IP showcase --sound` 体验，详见 [Agent 功能与 API](docs/agent.md)。
 
 ## 构建环境
 
@@ -35,7 +39,7 @@ RLCD_WIFI_SSID='<your-ssid>' RLCD_WIFI_PASSWORD='<your-password>' bash scripts/b
 
 `RLCD_WIFI_SSID` 为 1–32 个 UTF-8 字节；开放网络可省略密码，其他网络使用 8–63 字节密码或 64 位十六进制 PSK。两个变量都不设置时，不内置默认网络。有 NVS 保存配置时仍优先使用保存配置。
 
-每次构建都会重新生成 `firmware/rlcd_demo/wifi_defaults.h`，不会沿用上次构建的凭据。该文件和 `build/` 已加入 Git 忽略规则；生成头文件及固件产物包含传入的凭据。上传脚本会重新构建，因此上传时也要传入相同变量：
+每次构建都会重新生成 `firmware/rlcd/wifi_defaults.h`，不会沿用上次构建的凭据。该文件和 `build/` 已加入 Git 忽略规则；生成头文件及固件产物包含传入的凭据。上传脚本会重新构建，因此上传时也要传入相同变量：
 
 ```sh
 RLCD_WIFI_SSID='<your-ssid>' RLCD_WIFI_PASSWORD='<your-password>' bash scripts/upload.sh /dev/cu.usbmodem31201
@@ -119,27 +123,27 @@ curl http://DEVICE_IP/status
 
 未知路由及不支持的方法返回 `404`。接口不返回密码。
 
-## 测试
+## 验证
 
-构建参数验证（不连接设备）：`uv run tests/build_config.py`。检查参数边界、特殊字符生成的 C++ 字符串，以及重新构建时清除旧凭据。
+构建参数验证（不连接设备）：`uv run validation/build_config.py`。检查参数边界、特殊字符生成的 C++ 字符串，以及重新构建时清除旧凭据。
 
 设备联网后：
 
 ```sh
-uv run tests/http_smoke.py http://DEVICE_IP
+uv run validation/http_api.py http://DEVICE_IP
 ```
 
 检查 status 结构、echo 回显、JSON 转义、输入边界、中文拒绝和 404。蓝牙协议及人工验证步骤见 `docs/provisioning.md`。
 
-配网页面逻辑测试：`node tests/provision_ui.cjs`。它使用模拟 GATT 设备运行真实页面脚本，检查输入校验、20 字节分包和状态显示；不替代浏览器蓝牙权限及实际配网操作验证。
+配网页面逻辑验证：`node validation/provision_ui.cjs`。它使用模拟 GATT 设备运行真实页面脚本，检查输入校验、20 字节分包和状态显示；不替代浏览器蓝牙权限及实际配网操作验证。
 
-实机 BLE 测试（Mac 需允许执行环境使用蓝牙）：
+实机 BLE 验证（Mac 需允许执行环境使用蓝牙）：
 
 ```sh
-uv run --with bleak --with pyserial tests/ble_smoke.py /dev/cu.usbmodem31201
+uv run --with bleak --with pyserial validation/ble_provisioning.py /dev/cu.usbmodem31201
 ```
 
-该测试会临时切换网络，验证无效配置和失败连接，然后保存环境变量 `RLCD_WIFI_SSID` / `RLCD_WIFI_PASSWORD` 指定的测试网络（运行前必须设置 SSID），并再次尝试错误网络。测试结束后重启设备，确认自动恢复保存的测试网络。仅在允许覆盖测试设备 Wi-Fi 配置时运行。
+该脚本会临时切换网络，验证无效配置和失败连接，然后保存环境变量 `RLCD_WIFI_SSID` / `RLCD_WIFI_PASSWORD` 指定的指定网络（运行前必须设置 SSID），并再次尝试错误网络。验证结束后重启设备，确认自动恢复保存的指定网络。仅在允许覆盖目标设备 Wi-Fi 配置时运行。
 
 ## 硬件
 
@@ -156,16 +160,16 @@ uv run --with bleak --with pyserial tests/ble_smoke.py /dev/cu.usbmodem31201
 ## 目录
 
 ```text
-firmware/rlcd_demo/  应用、硬件驱动与 BLE 配置
+firmware/rlcd/  应用、硬件驱动与 BLE 配置
 libraries/U8g2/     图形库源码和许可证
 scripts/           构建、烧录脚本
 web/provision.html 独立配网页面
-tests/             HTTP 和配网页面验证脚本
+validation/             HTTP 和配网页面验证脚本
 docs/              蓝牙协议与验证说明
 licenses/          上游许可证
 build/             自动生成，忽略版本控制
 ```
 
-本版本面向可信测试网络：HTTP 没有鉴权或 TLS，BLE 配网窗口没有配对口令，NVS 未启用加密；默认凭据仅在构建时传入后编入固件。配网仅在联网失败或本机按键/USB 操作后开放。
+本版本面向可信局域网：HTTP 没有鉴权或 TLS，BLE 配网窗口没有配对口令，NVS 未启用加密；默认凭据仅在构建时传入后编入固件。配网仅在联网失败或本机按键/USB 操作后开放。
 
 ST7305 驱动来自 Waveshare `10_U8G2_Test`，许可证保存在 `licenses/Waveshare-LICENSE`。U8g2 为官方资料包中的 2.36.18，许可证位于 `libraries/U8g2/LICENSE`。参考：[Waveshare 文档](https://docs.waveshare.net/ESP32-S3-RLCD-4.2/)、[Chrome Web Bluetooth](https://developer.chrome.com/docs/capabilities/bluetooth)。

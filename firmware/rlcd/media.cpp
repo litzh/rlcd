@@ -713,3 +713,5 @@ void mediaRoutes(WebServer &s) {
         }
       });
 }
+
+int mediaPlayCue() { return start(false, "/agent-chime-v1.wav"); }
