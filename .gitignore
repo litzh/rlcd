@@ -2,3 +2,4 @@
 /firmware/rlcd/wifi_defaults.h
 __pycache__/
 .DS_Store
+.env
