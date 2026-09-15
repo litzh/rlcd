@@ -220,6 +220,7 @@ void petRoutes(WebServer &s) {
   s.on("/pets", HTTP_GET, [&s] {
     auto *j = registry();
     cJSON_AddStringToObject(j, "active_id", active ? active->id.c_str() : "");
+    cJSON_AddStringToObject(j, "runtime_path", active ? active->path.c_str() : "");
     cJSON_AddStringToObject(j, "state", playbackState.c_str());
     cJSON_AddNumberToObject(j, "frame", frameIndex);
     cJSON_AddStringToObject(j, "error", statusError.c_str());
@@ -300,4 +301,31 @@ void petRoutes(WebServer &s) {
     statusError = "";
     reply(s, 200, "selected");
   });
+}
+
+String petCurrentId() { return active ? active->id : String(""); }
+int petSelectTemporary(const String &id) {
+  if (!idOK(id.c_str()))
+    return 400;
+  auto *j = registry(), *pets = cJSON_GetObjectItemCaseSensitive(j, "pets");
+  String path;
+  for (int i = 0; i < cJSON_GetArraySize(pets); ++i) {
+    auto *entry = cJSON_GetArrayItem(pets, i);
+    auto *key = cJSON_GetObjectItemCaseSensitive(entry, "id");
+    auto *file = cJSON_GetObjectItemCaseSensitive(entry, "path");
+    if (cJSON_IsString(key) && id == key->valuestring && cJSON_IsString(file))
+      path = file->valuestring;
+  }
+  cJSON_Delete(j);
+  if (path.isEmpty())
+    return 404;
+  if (active && active->path == path)
+    return 200;
+  auto candidate = load(path);
+  if (!candidate)
+    return 400;
+  active = std::move(candidate);
+  petTransition();
+  statusError = "";
+  return 200;
 }

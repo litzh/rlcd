@@ -90,12 +90,14 @@ class Device:
         return json.loads(self.request("/agent/state"))
 
     def send(self, args, state=None, title=None, detail=None, progress=None):
-        current = self.status()
+        current = json.loads(self.request("/agent/state?" + urllib.parse.urlencode({"agent_id": args.agent, "task_id": args.task})))
         same = current["agent_id"] == args.agent and current["task_id"] == args.task
         sequence = args.seq if args.seq is not None else (current["seq"] + 1 if same else 1)
         payload = {"agent_id": args.agent, "task_id": args.task, "seq": sequence,
                    "state": state or args.state, "progress": args.progress if state is None else progress,
                    "ttl_seconds": args.ttl, "sound": args.sound}
+        if getattr(args, "pet", None):
+            payload["pet_id"] = args.pet
         title = args.title if title is None else title
         detail = args.detail if detail is None else detail
         if title is not None or detail is not None:
@@ -136,6 +138,7 @@ def main():
             sub.add_argument("state", choices=STATES)
         sub.add_argument("--agent", default="desktop-agent")
         sub.add_argument("--task", default="desktop-pet")
+        sub.add_argument("--pet", help="临时切换到已安装的宠物 ID")
         sub.add_argument("--seq", type=int)
         sub.add_argument("--ttl", type=int, default=120)
         sub.add_argument("--title")

@@ -35,7 +35,7 @@ static uint32_t connectStarted, lastScreen, lastSensors;
 static uint32_t lastConnectAttempt;
 static std::atomic<unsigned> pageRequests{0};
 static std::atomic<bool> provisionRequested{false};
-static unsigned page = 0;
+static unsigned page = 3;
 static float temperature, humidity, battery;
 static bool shtOK, rtcOK, rtcValid;
 static const char *shtError = "not_sampled";
@@ -297,7 +297,7 @@ static void sampleSensors() {
 }
 static String statusJson() {
   cJSON *j = cJSON_CreateObject();
-  cJSON_AddStringToObject(j, "firmware", "rlcd-0.5.0");
+  cJSON_AddStringToObject(j, "firmware", "rlcd-0.6.0");
   cJSON_AddItemToObject(j, "audio", mediaAudioStatus());
   cJSON_AddItemToObject(j, "sd", mediaSDStatus());
   cJSON_AddItemToObject(j, "buttons", mediaButtonsStatus());
@@ -380,9 +380,40 @@ static String ascii(const String &s) {
     output += (c >= 32 && c <= 126) ? c : '?';
   return output;
 }
+static void drawStandby() {
+  display->clearBuffer();
+  display->setDrawColor(1);
+  display->setFont(u8g2_font_unifont_t_gb2312);
+  display->drawUTF8(12, 25, "待机");
+  display->setFont(u8g2_font_logisoso42_tn);
+  String clock = rtcOK && rtcValid && rtcTime.length() >= 16 ? rtcTime.substring(11, 16) : "--:--";
+  display->drawStr(112, 105, clock.c_str());
+  display->setFont(u8g2_font_6x13_tf);
+  display->drawStr(125, 132,
+                   rtcOK && rtcValid ? rtcTime.substring(0, 10).c_str() : "RTC time unavailable");
+  display->drawHLine(12, 151, 376);
+  char info[80];
+  if (shtOK)
+    snprintf(info, sizeof(info), "Temperature: %.1f C    Humidity: %.1f%%", temperature, humidity);
+  else
+    snprintf(info, sizeof(info), "Temperature / humidity unavailable");
+  display->drawStr(20, 184, info);
+  snprintf(info, sizeof(info), "Battery voltage: %.2f V", battery);
+  display->drawStr(20, 210, info);
+  display->drawStr(20, 236,
+                   ("Network: " + phase + "  " +
+                    (WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : String("--")))
+                       .c_str());
+  display->drawStr(12, 278,
+                   bleEnabled ? "BLE setup available" : "Waiting for Agent updates   BOOT: pages");
+  display->sendBuffer();
+}
 static void drawScreen() {
   if (page == 3) {
-    agentDraw(*display, WiFi.localIP().toString(), bleEnabled);
+    if (agentStandby())
+      drawStandby();
+    else
+      agentDraw(*display, WiFi.localIP().toString(), bleEnabled);
     lastScreen = millis();
     return;
   }
@@ -547,7 +578,7 @@ void appLoop() {
     enableProvisioning();
   if (millis() - lastSensors >= 5000)
     sampleSensors();
-  if (millis() - lastScreen >= (page == 3 ? 125u : 1000u))
+  if (millis() - lastScreen >= (page == 3 && !agentStandby() ? 125u : 1000u))
     drawScreen();
   delay(2);
 }

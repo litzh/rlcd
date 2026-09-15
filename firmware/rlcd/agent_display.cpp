@@ -11,6 +11,18 @@ String owner, task, state = "idle";
 uint32_t sequence = 0, updated = 0, ttl = 120000;
 bool received = false, focus = false;
 int progress = -1, soundCode = 0;
+struct Watermark {
+  String agent, task;
+  uint32_t seq = 0;
+};
+Watermark history[64];
+int historySize = 0;
+int historyIndex(const String &a, const String &t) {
+  for (int i = 0; i < historySize; ++i)
+    if (history[i].agent == a && history[i].task == t)
+      return i;
+  return -1;
+}
 const char *states[] = {"idle", "working", "waiting_input", "success", "error"};
 const char *labels[] = {"等待任务", "正在处理", "等待输入", "任务完成", "发生错误"};
 int stateIndex(const String &s) {
@@ -51,11 +63,18 @@ bool integer(cJSON *v, double low, double high) {
 }
 } // namespace
 
+bool agentStandby() {
+  return !received || expired() ||
+         ((state == "idle" || state == "success") && uint32_t(millis() - updated) >= 30000);
+}
 cJSON *agentStatus() {
   auto *j = cJSON_CreateObject();
   cJSON_AddStringToObject(j, "agent_id", owner.c_str());
   cJSON_AddStringToObject(j, "task_id", task.c_str());
   cJSON_AddNumberToObject(j, "seq", sequence);
+  cJSON_AddBoolToObject(j, "expired", expired());
+  cJSON_AddBoolToObject(j, "standby", agentStandby());
+  cJSON_AddStringToObject(j, "pet_id", petCurrentId().c_str());
   cJSON_AddStringToObject(j, "state", expired() ? "stale" : state.c_str());
   if (progress < 0)
     cJSON_AddNullToObject(j, "progress");
@@ -68,7 +87,21 @@ cJSON *agentStatus() {
 }
 
 void agentRoutes(WebServer &s) {
-  s.on("/agent/state", HTTP_GET, [&s] { s.send(200, "application/json", encode(agentStatus())); });
+  s.on("/agent/state", HTTP_GET, [&s] {
+    if (s.hasArg("agent_id") || s.hasArg("task_id")) {
+      if (!s.hasArg("agent_id") || !s.hasArg("task_id")) {
+        s.send(400, "application/json", "{\"error\":\"both_ids_required\"}");
+        return;
+      }
+      int i = historyIndex(s.arg("agent_id"), s.arg("task_id"));
+      auto *j = cJSON_CreateObject();
+      cJSON_AddStringToObject(j, "agent_id", s.arg("agent_id").c_str());
+      cJSON_AddStringToObject(j, "task_id", s.arg("task_id").c_str());
+      cJSON_AddNumberToObject(j, "seq", i < 0 ? 0 : history[i].seq);
+      s.send(200, "application/json", encode(j));
+    } else
+      s.send(200, "application/json", encode(agentStatus()));
+  });
   s.on("/agent/state", HTTP_POST, [&s] {
     String raw = s.arg("plain");
     if (raw.length() > 10000) {
@@ -92,9 +125,11 @@ void agentRoutes(WebServer &s) {
     auto *a = field("agent_id"), *t = field("task_id"), *q = field("seq"), *v = field("state");
     auto *p = field("progress"), *life = field("ttl_seconds"), *bitmap = field("text_hex"),
          *sound = field("sound");
+    auto *pet = field("pet_id");
     bool ok =
-        cJSON_IsObject(j) && idOK(a) && idOK(t) && integer(q, 1, 4294967295.0) &&
-        cJSON_IsString(v) && stateIndex(v->valuestring) >= 0 && integer(life, 5, 86400) &&
+        cJSON_IsObject(j) && (!pet || (cJSON_IsString(pet) && strlen(pet->valuestring) <= 32)) &&
+        idOK(a) && idOK(t) && integer(q, 1, 4294967295.0) && cJSON_IsString(v) &&
+        stateIndex(v->valuestring) >= 0 && integer(life, 5, 86400) &&
         (!p || cJSON_IsNull(p) || integer(p, 0, 100)) && (!sound || cJSON_IsBool(sound)) &&
         (!bitmap || (cJSON_IsString(bitmap) && strlen(bitmap->valuestring) == TEXT_BYTES * 2));
     if (ok && bitmap)
@@ -109,12 +144,33 @@ void agentRoutes(WebServer &s) {
       return;
     }
     bool same = received && owner == a->valuestring && task == t->valuestring;
-    if (same && q->valuedouble <= sequence) {
+    int slot = historyIndex(a->valuestring, t->valuestring);
+    if (slot >= 0 && q->valuedouble <= history[slot].seq) {
       cJSON_Delete(j);
       s.send(409, "application/json", "{\"error\":\"stale_sequence\"}");
       return;
     }
-    bool transition = !same || state != v->valuestring || expired();
+    if (slot < 0 && historySize == 64) {
+      cJSON_Delete(j);
+      s.send(503, "application/json", "{\"error\":\"task_history_full\"}");
+      return;
+    }
+    bool changedPet = pet && petCurrentId() != pet->valuestring;
+    if (pet) {
+      int code = petSelectTemporary(pet->valuestring);
+      if (code != 200) {
+        cJSON_Delete(j);
+        s.send(code, "application/json", "{\"error\":\"pet_unavailable\"}");
+        return;
+      }
+    }
+    if (slot < 0) {
+      slot = historySize++;
+      history[slot].agent = a->valuestring;
+      history[slot].task = t->valuestring;
+    }
+    history[slot].seq = uint32_t(q->valuedouble);
+    bool transition = changedPet || !same || state != v->valuestring || expired();
     if (bitmap) {
       for (size_t i = 0; i < TEXT_BYTES; ++i)
         pixels[i] =
@@ -154,7 +210,7 @@ void agentDraw(U8G2 &d, const String &ip, bool provisioning) {
   d.clearBuffer();
   d.setDrawColor(1);
   d.setFont(u8g2_font_unifont_t_gb2312);
-  d.drawUTF8(12, 23, stale ? "状态已过期" : labels[index]);
+  d.drawUTF8(12, 23, labels[index]);
   d.setFont(u8g2_font_6x13_tf);
   d.drawStr(268, 21, ip.c_str());
   petDraw(d, stale ? "stale" : state);

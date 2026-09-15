@@ -23,6 +23,8 @@ rlcd pet use deepseek-whale
 
 [Agent 接口文档](docs/agent.md) 保留作为协议参考。普通接入优先提供 SKILL，需要实现新客户端时再补充接口文档。
 
+DeepSeek Harness（dsh）用户可以直接安装 [dsh 插件](integrations/dsh/README.md)：它监听 dsh 的 agent 生命周期，自动上报任务状态并激活 `deepseek-whale`，无需模型参与。
+
 ## 功能
 
 - 开机优先读取 NVS 保存的 Wi-Fi；没有有效保存配置则连接构建时指定的默认网络；未指定默认网络时直接等待 BLE 配网。
@@ -33,6 +35,10 @@ rlcd pet use deepseek-whale
 - HTTP 80 端口提供 `POST /echo` 和 `GET /status`。
 - v0.3.0 增加录音、WAV 播放、音量、SD 文件管理和按键事件 API，见 [音频/SD/按键文档](docs/media-api.md)。
 - KEY 单击录音/停止、双击播放最近录音；BOOT 单击切换网络/传感器/音频/宠物页面，长按三秒仍用于配网。
+
+## 待机与客户端宠物
+
+v0.6.0 默认显示时钟/传感器待机页，任务上报唤醒宠物；idle/success 30 秒后或 TTL 到期时回到待机。上报可加 `--pet deepseek-whale` 临时切换宠物，多客户端序号独立校验，详见 [Agent 接入](docs/agent.md)。
 
 ## 宠物素材包
 
