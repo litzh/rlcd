@@ -19,16 +19,36 @@
 
 ## 安装
 
-在 dsh 的 web profile patch 里按绝对路径插入本插件：
+把插件文件装到 `$DSH_HOME/plugins/dsh-rlcd/`（默认 `~/.dsh/plugins/dsh-rlcd/`），再用 **home 级 patch** 注册。home patch 覆盖在每个 profile 自己的层之上，所以对所有 profile（web / headless / sdk / acp）都生效：
 
-```yaml
-# ~/.dsh/profiles/web/cordis.patch.yml
-- insert:
-    - id: dsh-rlcd
-      name: '/absolute/path/to/rlcd/integrations/dsh/index.ts'
+```sh
+./install.sh          # 复制到 $DSH_HOME/plugins/dsh-rlcd/，并提示缺失的 patch 内容
 ```
 
-web profile 默认 `patchReload: "live"`，保存后立即生效，不必重启。若未生效，重启 `dsh web` 即可。
+等价于手动复制：
+
+```sh
+mkdir -p ~/.dsh/plugins/dsh-rlcd
+cp index.ts smoke-test.ts README.md ~/.dsh/plugins/dsh-rlcd/
+```
+
+```yaml
+# ~/.dsh/cordis.patch.yml —— home 级用户 patch 层
+- insert:
+    - id: dsh-rlcd
+      name: '/Users/<you>/.dsh/plugins/dsh-rlcd/index.ts'
+```
+
+home patch 与 profile patch 都是 **config-only live HMR**，保存后立即生效，不必重启（改插件源码本身才需要重启 `dsh web`）。
+
+用 dump 确认解析结果：
+
+```sh
+dsh --profile web --dump-config | grep -A1 -B1 dsh-rlcd
+# == /Users/<you>/.dsh/cordis.patch.yml
+# - id: dsh-rlcd
+#   name: file:///Users/<you>/.dsh/plugins/dsh-rlcd/index.ts
+```
 
 前提：本机已安装 `rlcd` CLI 并配置好设备地址（`rlcd config set device http://DEVICE_IP`），且已安装宠物素材：
 
@@ -39,7 +59,7 @@ rlcd pet install deepseek-whale
 ## 验证
 
 ```sh
-node integrations/dsh/smoke-test.ts
+node ~/.dsh/plugins/dsh-rlcd/smoke-test.ts
 ```
 
 用一个最小 ctx 桩加载插件、触发真实生命周期事件，再查询设备状态逐项断言（工具/命令注册、状态映射、宠物激活、子 agent 过滤、用户提问往返）。会真实改动开发板显示，结束时清空。
@@ -61,7 +81,7 @@ rlcd status          # agent_id=dsh、task_id=main 即本插件在生效
 
 ## 开发约束
 
-本文件是**零运行时依赖**的：只 import `node:child_process` / `node:os` / `node:path`，所有 `@deepseek-ai/*` 都是 `import type`，会被 Node 的类型擦除移除。因此它可以放在仓库里、由 profile patch 用绝对路径直接加载，而不需要它所在目录能解析到 dsh 的包。
+本文件是**零运行时依赖**的：只 import `node:child_process` / `node:os` / `node:path`，所有 `@deepseek-ai/*` 都是 `import type`，会被 Node 的类型擦除移除。因此插件可以直接躺在 `~/.dsh/plugins/` 下、由 home patch 用绝对路径加载，不需要它所在目录能解析到 dsh 的包。
 
 新增 `@deepseek-ai/*` 导入时**必须用 `import type`**。用普通 `import` 会在加载时报 `ERR_MODULE_NOT_FOUND`。
 
@@ -71,9 +91,11 @@ rlcd status          # agent_id=dsh、task_id=main 即本插件在生效
 mkdir -p /tmp/rlcd-check/node_modules/@types
 ln -sfn "$DSH_CHECKOUT/node_modules/@types/node" /tmp/rlcd-check/node_modules/@types/node
 ln -sfn ~/.dsh/profiles/node_modules/@deepseek-ai /tmp/rlcd-check/node_modules/@deepseek-ai
-cp integrations/dsh/index.ts /tmp/rlcd-check/plugin.ts
+cp ~/.dsh/plugins/dsh-rlcd/index.ts /tmp/rlcd-check/plugin.ts
 cd "$DSH_CHECKOUT" && pnpm exec tsc --ignoreConfig --noEmit --strict --skipLibCheck \
   --module nodenext --moduleResolution nodenext --target es2022 --types node /tmp/rlcd-check/plugin.ts
 ```
 
-注意：profile patch 的 HMR 是 **config-only**，改 `cordis.patch.yml` 会立即生效，但修改本插件源码本身需要重启 `dsh web` 才会重新加载。
+注意：home/profile patch 的 HMR 是 **config-only**，改 `cordis.patch.yml` 会立即生效，但修改本插件源码本身需要重启 `dsh web` 才会重新加载。
+
+改完仓库里的源码后，重新 `cp` 到 `~/.dsh/plugins/dsh-rlcd/` 并重启 `dsh web`。
