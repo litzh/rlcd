@@ -174,6 +174,9 @@ uint8_t ST7305_U8g2::u8x8_d_st7305_custom(u8x8_t *u8x8, uint8_t msg, uint8_t arg
         }
       }
 
+      // Complement final panel bytes; leave all logical drawing buffers unchanged.
+      if (g_lcd_instance->_inverted)
+        for (size_t i = 0; i < (size_t)send_cnt * 4U; ++i) all_rows[i] ^= 0xFF;
       g_lcd_instance->_cmd_data(0x2C, all_rows, (size_t)send_cnt * 4U);
       break;
     }

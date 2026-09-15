@@ -18,6 +18,10 @@ static ST7305_U8g2 lcd(11, 12, 5, 40, 41);
 static U8G2 *display;
 static WebServer http(80);
 static Preferences prefs;
+static Preferences displayPrefs;
+static bool displayStorageOK = false, inverted = false, displayDirty = false;
+static String displayError;
+static std::atomic<unsigned> invertRequests{0};
 static bool storageOK, bleEnabled = false, bleReady = false;
 static BLECharacteristic *bleStatus;
 static BLEServer *bleServer;
@@ -297,7 +301,7 @@ static void sampleSensors() {
 }
 static String statusJson() {
   cJSON *j = cJSON_CreateObject();
-  cJSON_AddStringToObject(j, "firmware", "rlcd-0.6.0");
+  cJSON_AddStringToObject(j, "firmware", "rlcd-0.6.1");
   cJSON_AddItemToObject(j, "audio", mediaAudioStatus());
   cJSON_AddItemToObject(j, "sd", mediaSDStatus());
   cJSON_AddItemToObject(j, "buttons", mediaButtonsStatus());
@@ -339,7 +343,51 @@ static String statusJson() {
     cJSON_AddNullToObject(r, "time");
   return jsonText(j);
 }
+static String displayJson() {
+  auto *j = cJSON_CreateObject();
+  cJSON_AddBoolToObject(j, "inverted", inverted);
+  cJSON_AddBoolToObject(j, "storage_ready", displayStorageOK);
+  if (displayError.isEmpty())
+    cJSON_AddNullToObject(j, "error");
+  else
+    cJSON_AddStringToObject(j, "error", displayError.c_str());
+  return jsonText(j);
+}
+static bool setDisplayInverted(bool next) {
+  if (next == inverted) {
+    displayError = "";
+    return true;
+  }
+  if (!displayStorageOK || displayPrefs.putBool("inverted", next) != 1) {
+    displayError = "display_save_failed";
+    Serial.println("DISPLAY setting save failed");
+    return false;
+  }
+  inverted = next;
+  lcd.setInverted(inverted);
+  displayDirty = true;
+  displayError = "";
+  return true;
+}
 static void httpSetup() {
+  http.on("/display", HTTP_GET, [] { http.send(200, "application/json", displayJson()); });
+  http.on("/display/invert", HTTP_PUT, [] {
+    String raw = http.arg("plain");
+    if (raw.length() > 128) {
+      http.send(413, "application/json", "{\"error\":\"body_too_large\"}");
+      return;
+    }
+    auto *j = parseObject(raw);
+    auto *mode = cJSON_GetObjectItemCaseSensitive(j, "mode");
+    String value = cJSON_IsString(mode) ? mode->valuestring : "";
+    cJSON_Delete(j);
+    if (value != "on" && value != "off" && value != "toggle") {
+      http.send(400, "application/json", "{\"error\":\"mode_must_be_on_off_toggle\"}");
+      return;
+    }
+    bool ok = setDisplayInverted(value == "toggle" ? !inverted : value == "on");
+    http.send(ok ? 200 : 503, "application/json", displayJson());
+  });
   mediaRoutes(http);
   agentRoutes(http);
   petRoutes(http);
@@ -490,6 +538,11 @@ void appSetup() {
   storageOK = prefs.begin("rlcd-wifi", false);
   lcd.begin(0, U8G2_R1);
   display = lcd.getU8g2();
+  displayStorageOK = displayPrefs.begin("rlcd-display", false);
+  inverted = displayStorageOK && displayPrefs.getBool("inverted", false);
+  if (!displayStorageOK)
+    displayError = "display_storage_unavailable";
+  lcd.setInverted(inverted);
   Wire.begin(13, 14);
   Wire.setTimeOut(50);
   analogSetPinAttenuation(4, ADC_11db);
@@ -499,7 +552,8 @@ void appSetup() {
   delay(20);
   mediaSetup();
   petSetup();
-  mediaStartButtons([] { pageRequests.fetch_add(1); }, [] { provisionRequested.store(true); });
+  mediaStartButtons([] { pageRequests.fetch_add(1); }, [] { provisionRequested.store(true); },
+                    [] { invertRequests.fetch_add(1); });
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
   WiFi.setAutoReconnect(false);
@@ -561,6 +615,8 @@ void appLoop() {
         console = "";
     }
   }
+  if (invertRequests.exchange(0) & 1u)
+    setDisplayInverted(!inverted);
   networkTick();
   http.handleClient();
   mediaAfterHttp();
@@ -578,7 +634,9 @@ void appLoop() {
     enableProvisioning();
   if (millis() - lastSensors >= 5000)
     sampleSensors();
-  if (millis() - lastScreen >= (page == 3 && !agentStandby() ? 125u : 1000u))
+  if (displayDirty || millis() - lastScreen >= (page == 3 && !agentStandby() ? 125u : 1000u)) {
     drawScreen();
+    displayDirty = false;
+  }
   delay(2);
 }

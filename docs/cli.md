@@ -72,3 +72,7 @@ uv run validation/pet_assets.py
 ```
 
 wheel 只包含 CLI、宠物素材和文档，不包含固件、构建目录、Wi-Fi 生成头文件或 `.env`。CLI 的版本独立于设备固件；本次 CLI 打包不需要重新烧录设备。
+
+## 显示控制
+
+`rlcd display status` 查询显示设置；`rlcd display invert on|off|toggle` 控制全屏黑白反转。设置保存在设备 NVS，不写本机 config.json。详见 [显示控制](display.md)。

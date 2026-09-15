@@ -115,6 +115,11 @@ def main():
     parser.add_argument("--device")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("status")
+    display = commands.add_parser("display", help="控制全屏显示")
+    display_commands = display.add_subparsers(dest="display_command", required=True)
+    display_commands.add_parser("status")
+    invert = display_commands.add_parser("invert")
+    invert.add_argument("mode", choices=("on", "off", "toggle"))
     settings = commands.add_parser("config", help="管理 ~/.config/rlcd 配置")
     settings_commands = settings.add_subparsers(dest="config_command", required=True)
     settings_commands.add_parser("show")
@@ -178,7 +183,13 @@ def main():
         parser.error("请运行 rlcd config set device http://IP，或设置 --device / RLCD_DEVICE")
     try:
         device = Device(args.device)
-        if args.command == "pet":
+        if args.command == "display":
+            if args.display_command == "status":
+                result = device.request("/display")
+            else:
+                result = device.request("/display/invert", json.dumps({"mode": args.mode}).encode(), "PUT")
+            print(result.decode())
+        elif args.command == "pet":
             from .pet_assets import install_pet
             if args.pet_command == "install":
                 install_pet(device, args.folder)

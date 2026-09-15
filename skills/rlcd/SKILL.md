@@ -111,3 +111,9 @@ rlcd pet use deepseek-whale
 默认开机待机；idle/success 上报 30 秒后待机，working/waiting_input/error 保留到 TTL。API 的 standby 和 expired 区分待机与过期；待机不是失败。新的有效上报立即唤醒。切回被其他客户端覆盖的任务时重新发送标题和正文，不假定旧文字仍在。
 
 每次启动最多保留 64 个 Agent/任务的序号，不随 TTL 淘汰。503 task_history_full 表示表已满，不要循环重试或擅自重启；报告限制。长期接入可用固定任务槽、持续递增序号。CLI 和固件应同时为 0.6.0 或更新兼容版本。
+
+## 全屏黑白反转（0.6.1）
+
+用户要求反转显示时，运行 `rlcd display invert toggle`；明确要求某种模式时使用 `on` / `off`。`rlcd display status` 查询，HTTP 为 `GET /display` 和 `PUT /display/invert`（JSON `{"mode":"on"}`）。设置影响所有页面并保存在设备 NVS，不随宠物切换而改变；KEY 长按一秒也可切换。
+
+请求超时后先查询，再用 on/off 设置目标值，不原样重复 toggle。普通状态上报不主动改变用户的显示偏好。详细说明见 display.md。

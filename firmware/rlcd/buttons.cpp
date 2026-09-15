@@ -11,6 +11,7 @@ Event events[64];
 uint32_t sequence = 0;
 void (*clickCallback)();
 void (*longCallback)();
+void (*keyLongCallback)();
 bool ready = false;
 const char *names[] = {"KEY", "BOOT"};
 const char *types[] = {"none", "single_click", "double_click", "long_press"};
@@ -39,6 +40,8 @@ void run(void *) {
           mediaKeyClick();
         if (i == 0 && event == 2)
           mediaKeyDouble();
+        if (i == 0 && event == 3 && keyLongCallback)
+          keyLongCallback();
         if (i == 1 && event == 1 && clickCallback)
           clickCallback();
         if (i == 1 && event == 3 && longCallback)
@@ -49,7 +52,8 @@ void run(void *) {
   }
 }
 } // namespace
-void mediaStartButtons(void (*bootClick)(), void (*bootLong)()) {
+void mediaStartButtons(void (*bootClick)(), void (*bootLong)(), void (*keyLong)()) {
+  keyLongCallback = keyLong;
   clickCallback = bootClick;
   longCallback = bootLong;
   pinMode(18, INPUT_PULLUP);

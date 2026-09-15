@@ -14,6 +14,7 @@ private:
   SPIClass *_spi = nullptr;
   U8G2 u8g2_wrapper;
   uint8_t *_my_buf = nullptr;
+  bool _inverted = false;
 
   void _cmd(uint8_t cmd);
   void _data(const uint8_t *data, size_t len);
@@ -30,6 +31,7 @@ public:
   // A smaller value can be used with firstPage()/nextPage(), but this firmware uses full-buffer mode.
   void begin(uint8_t tile_buf_height = 0, const u8g2_cb_t *rotation = U8G2_R0);
   void reset();
+  void setInverted(bool value) { _inverted = value; }
   void fullInit();
 
   U8G2 *getU8g2()

@@ -36,6 +36,10 @@ DeepSeek Harness（dsh）用户可以直接安装 [dsh 插件](integrations/dsh/
 - v0.3.0 增加录音、WAV 播放、音量、SD 文件管理和按键事件 API，见 [音频/SD/按键文档](docs/media-api.md)。
 - KEY 单击录音/停止、双击播放最近录音；BOOT 单击切换网络/传感器/音频/宠物页面，长按三秒仍用于配网。
 
+## 黑白反转
+
+长按 KEY 一秒或运行 `rlcd display invert toggle` 即可全屏交换黑白，设置跨重启保存。详见 [显示控制](docs/display.md)。
+
 ## 待机与客户端宠物
 
 v0.6.0 默认显示时钟/传感器待机页，任务上报唤醒宠物；idle/success 30 秒后或 TTL 到期时回到待机。上报可加 `--pet deepseek-whale` 临时切换宠物，多客户端序号独立校验，详见 [Agent 接入](docs/agent.md)。
